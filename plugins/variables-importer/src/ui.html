@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+   <title>Figma Plugin</title>
+</head>
+
+<body>
+   <style>
+      body {
+         font-family: 'Arial', sans-serif;
+         margin: 0;
+         padding: 0;
+         background-color: var(--figma-color-bg);
+         color: var(--figma-color-text);
+      }
+
+      h1 {
+         font-size: 1rem;
+         font-weight: 500;
+      }
+
+      form {
+         margin-top: 1rem;
+         display: flex;
+         flex-direction: column;
+         gap: 0.5rem;
+      }
+
+      form>div {
+         display: flex;
+         flex-direction: column;
+         gap: 0.25rem;
+      }
+
+      label {
+         font-size: 0.75rem;
+      }
+
+      input[type="text"],
+      input[type="file"] {
+         padding: 0.5rem;
+         border: 1px solid var(--figma-color-border);
+         border-radius: 0.25rem;
+         font-size: 0.75rem;
+      }
+
+      input[type="file"] {
+         padding: 0.5rem 0.5rem;
+      }
+
+      button {
+         padding: 0.5rem;
+         border: none;
+         border-radius: 0.25rem;
+         background-color: var(--figma-color-bg-brand);
+         color: var(--figma-color-text-onbrand);
+         font-size: 0.75rem;
+         cursor: pointer;
+      }
+
+      button:hover {
+         background-color: var(--figma-color-primary-hover);
+      }
+
+      button[type="submit"] {
+         margin-top: 1rem;
+         align-self: flex-start;
+      }
+
+      .error {
+         font-size: 0.75rem;
+         color: var(--figma-color-error);
+      }
+
+      .error::before {
+         content: '⚠️ ';
+      }
+
+      .error::after {
+         content: '';
+      }
+
+      .error:empty {
+         display: none;
+      }
+
+      .error:not(:empty)+input {
+         border-color: var(--figma-color-error);
+      }
+
+      .root {
+         padding: 1rem;
+         display: flex;
+         flex-direction: column;
+         gap: 0.25rem;
+      }
+
+      .divider {
+         height: 1px;
+         background-color: var(--figma-color-border);
+      }
+   </style>
+   <div class="root">
+      <h1>Add Local Variables</h1>
+      <div class="divider"></div>
+      <form>
+         <div>
+            <label for="jsonfile">Variables JSON</label>
+            <input type="file" id="jsonfile" name="jsonfile" accept=".json">
+            <p id="jsonfile-error-message" class="error"></p>
+         </div>
+         <button type="submit">Add Collection</button>
+      </form>
+   </div>
+   <script>
+      onmessage = (event) => {
+         // console.log(event.data.pluginMessage)
+      }
+
+      function showError(input, message) {
+         const error = document.getElementById(`${input.id}-error-message`);
+         error.textContent = message;
+      }
+
+      function clearError(input) {
+         const error = document.getElementById(`${input.id}-error-message`);
+         error.textContent = '';
+      }
+
+      function clearErrors() {
+         document.querySelectorAll('.error').forEach(error => error.textContent = '');
+      }
+
+      document.querySelector('form').addEventListener('submit', function (e) {
+         e.preventDefault();
+         const jsonfileInput = document.getElementById('jsonfile');
+         if (!jsonfileInput.files.length) {
+            showError(jsonfileInput, 'JSON file is required');
+            return;
+         } else {
+            clearError(jsonfileInput);
+         }
+
+         const reader = new FileReader();
+         reader.onload = function (e) {
+            const json = JSON.parse(e.target.result);
+            parent.postMessage({
+               pluginMessage: {
+                  code: 'CREATE_COLLECTION',
+                  data: json
+               }
+            }, '*');
+         }
+         reader.readAsText(jsonfileInput.files[0]);
+      });
+
+   </script>
+</body>
+
+</html>
