@@ -24,10 +24,10 @@
          margin-top: 1rem;
          display: flex;
          flex-direction: column;
-         gap: 0.5rem;
+         gap: 1rem;
       }
 
-      form>div {
+      form>[data-role='field'] {
          display: flex;
          flex-direction: column;
          gap: 0.25rem;
@@ -57,14 +57,14 @@
          color: var(--figma-color-text-onbrand);
          font-size: 0.75rem;
          cursor: pointer;
+         transition: background-color 0.2s ease;
       }
 
       button:hover {
-         background-color: var(--figma-color-primary-hover);
+         background-color: var(--figma-color-bg-brand-hover);
       }
 
       button[type="submit"] {
-         margin-top: 1rem;
          align-self: flex-start;
       }
 
@@ -102,12 +102,18 @@
       }
    </style>
    <div class="root">
-      <h1>Add Local Variables</h1>
+      <h1>Add Local Variable Collection</h1>
       <div class="divider"></div>
       <form>
-         <div>
-            <label for="jsonfile">Variables JSON</label>
-            <input type="file" id="jsonfile" name="jsonfile" accept=".json">
+         <div data-role="field">
+            <label for="collection-name" id="collection-name-label">Collection Name</label>
+            <input type="text" name="collection-name" id="collection-name" placeholder="collection name"
+               value="Collection">
+            <p id="collection-name-error-message" class="error"></p>
+         </div>
+         <div data-role="field">
+            <label for="jsonfile" id="name-label">Variables JSON</label>
+            <input type="file" name="jsonfile" id="jsonfile" accept=".json">
             <p id="jsonfile-error-message" class="error"></p>
          </div>
          <button type="submit">Add Collection</button>
@@ -132,19 +138,45 @@
          document.querySelectorAll('.error').forEach(error => error.textContent = '');
       }
 
-      document.querySelector('form').addEventListener('submit', function (e) {
-         e.preventDefault();
-         const jsonfileInput = document.getElementById('jsonfile');
-         if (!jsonfileInput.files.length) {
-            showError(jsonfileInput, 'JSON file is required');
-            return;
+      const handleFormField = (id, validator, errorMessage) => {
+         if (typeof id !== "string") throw new Error("id must be a string");
+         if (typeof validator !== "function") throw new Error("validator must be a function");
+         if (typeof errorMessage !== "string") throw new Error("errorMessage must be a string");
+         const input = document.getElementById(id);
+         if (!input) throw new Error(`Element with id ${id} not found`);
+         let isValid = true;
+         if (!validator(input)) {
+            showError(input, errorMessage);
+            isValid = false;
          } else {
-            clearError(jsonfileInput);
+            clearError(input);
          }
+         return { input, isValid };
+      }
+
+      function handleSubmit(e) {
+         e.preventDefault();
+         const collectionNameField = handleFormField(
+            'collection-name',
+            (input) => input.value.trim().length > 0,
+            'Collection name is required'
+         )
+
+         const jsonfileField = handleFormField(
+            'jsonfile',
+            (input) => input.files.length > 0,
+            'JSON file is required'
+         )
+
+         if (!collectionNameField.isValid || !jsonfileField.isValid) return;
 
          const reader = new FileReader();
          reader.onload = function (e) {
-            const json = JSON.parse(e.target.result);
+            const jsonfileValue = JSON.parse(e.target.result);
+            const json = {
+               collection_name: collectionNameField.input.value,
+               variables: jsonfileValue
+            }
             parent.postMessage({
                pluginMessage: {
                   code: 'CREATE_COLLECTION',
@@ -152,8 +184,10 @@
                }
             }, '*');
          }
-         reader.readAsText(jsonfileInput.files[0]);
-      });
+         reader.readAsText(jsonfileField.input.files[0]);
+      }
+
+      document.querySelector('form')?.addEventListener('submit', handleSubmit);
 
    </script>
 </body>

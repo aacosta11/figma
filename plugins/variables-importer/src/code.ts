@@ -1,7 +1,8 @@
 // https://www.figma.com/plugin-docs/how-plugins-run
 
-import { FigmaCollection } from "./figma-variables-module";
-import { UiMessage, IncomingMessage } from "./types";
+import { FigmaCollection } from "./modules/figma-collection";
+import { FigmaVariable } from "./modules/figma-variable";
+import { UiMessage, type IncomingMessage } from "./modules/incoming-message";
 
 
 function main() {
@@ -13,10 +14,18 @@ function main() {
     switch (msg.code) {
       case UiMessage.CreateCollection:
         console.log("adding collection...");
-        console.log(msg.data);
+        const variables: FigmaVariable[] = [];
+        for (const variable of msg.data.variables) {
+          const figmaVariable = new FigmaVariable(variable.name, variable.value);
+          variables.push(figmaVariable);
+        }
+        if (variables.length === 0) {
+          console.error("No variables to add to collection!");
+          return;
+        }
         const collection = new FigmaCollection(msg.data.collection_name);
-        for (const key of Object.keys(msg.data.variables)) {
-          collection.addVariable(msg.data.variables[key]);
+        for (const figmaVariable of variables) {
+          collection.addVariable(figmaVariable);
         }
         console.log("collection added!");
         break;
@@ -26,3 +35,4 @@ function main() {
 
 
 main();
+
